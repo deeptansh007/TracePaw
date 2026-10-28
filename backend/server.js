@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { connectDb } from './config/db.js';
 import userRoute from './route/user.route.js';
+import reportRouter from './route/report.route.js'
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 const PORT = process.env.PORT;
 
 app.use('/user', userRoute);
+app.use('/api/reports', reportRouter);
 
 const startServer = async ()=>{
 try{

@@ -1,11 +1,11 @@
-import {User} from '../models/user.model.js'
+import User from '../models/user.model.js'
 import bcrypt, { hash } from 'bcrypt'
-
+import jwt from 'jsonwebtoken'
 export const CreateUser = async (req, res) => {
     try{
-        const { name, email, password, phone } = req.body;
-        // Validation f
-        if(!name || !email || !password || !phone ){
+        const { name, email, password, phoneNumber } = req.body;
+        // Validation 
+        if(!name || !email || !password || !phoneNumber ){
             return res.status(404).json({
                 message:"Fill all the fields"
             })
@@ -26,12 +26,14 @@ export const CreateUser = async (req, res) => {
             name,
             email,
             password: hashPassword,
-            phone
+            phoneNumber
         })
+
+        const safeUser = await User.findById(UserData.id).select('-password');
 
         return res.status(201).json({
             message:"User create successful",
-            data:UserData
+            data:safeUser
         })
     }catch (error){
         return res.status(500).json({
@@ -43,14 +45,18 @@ export const CreateUser = async (req, res) => {
 
 export const updateUser = async (req, res) =>{
     try{
-        const { name, email, password, phone } =req.body;
+        const { name, email, password, phoneNumber } =req.body;
         const { id } = req.params;
-
+        if(String(req.user.id) !== id){
+            return res.status(403).json({
+                message:'You cannot update another user account'
+            })
+        }
      const updateData = {};
 
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
-    if (phone !== undefined) updateData.phone = phone;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
 
       if(password){
         updateData.password = await bcrypt.hash(password,10);
@@ -82,9 +88,9 @@ export const updateUser = async (req, res) =>{
 export const deleteUser = async (req, res) => {
     try{
         const { id } = req.params;
-         if(!id){
-            return res.status(404).json({
-                message:"User Id not found"
+         if(String(req.user.id)!== id){
+            return res.status(403).json({
+            message:'You cannot update another user account'
             })
         }
         const userDelete = await User.findByIdAndDelete(id);
@@ -93,7 +99,7 @@ export const deleteUser = async (req, res) => {
             message: "User ID not found" }); 
         }
         return res.status(200).json({
-            message:"User delete successful",
+            message:"User deleted successful",
         })
     }catch(error){
         return res.status(500).json({
@@ -106,12 +112,12 @@ export const deleteUser = async (req, res) => {
 export const searchUser = async (req, res) =>{
     try{
         const { id } = req.params;
-        if(!id){
-            return res.status(404).json({
-                message:"User Id not found"
-            })
+       if (String(req.user.id) !== id) {
+            return res.status(403).json({
+                message: 'You cannot access another user account'
+            });
         }
-        const search = await User.findById(id);
+        const search = await User.findById(id).select('-password');;
         if(!search){
             return res.status(404).json({
                 message:"User not found"
@@ -151,9 +157,25 @@ export const userLogin = async (req, res) => {
                 message:"Invalid email or password"
             })
         }
+         if (!process.env.ACCESS_TOKEN_SECRET) {
+            throw new Error('JWT secret is not configured');
+        }
+
+        const token = jwt.sign({
+            id:emailCheck.id,
+            email:emailCheck.email
+        },process.env.ACCESS_TOKEN_SECRET,{expiresIn:'5m'})
+
         return res.status(200).json({
             message:"Login successful",
-        //     id: emailCheck._id, name: emailCheck.name, email: emailCheck.email,
+            token,
+            user: {
+                id: emailCheck._id,
+                name: emailCheck.name,
+                email: emailCheck.email,
+                phoneNumber: emailCheck.phoneNumber
+            }
+        //    id: emailCheck._id, name: emailCheck.name, email: emailCheck.email,
         //    password:emailCheck.password
         })
     }catch (error){

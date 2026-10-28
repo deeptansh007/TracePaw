@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
             required:true,
             minlength:[8,"Password must be atleast 8 characters"]
         },
-        phone:{
+        phoneNumber:{
             type:Number,
             required:true,
             trim:true,
@@ -27,4 +27,5 @@ const userSchema = new mongoose.Schema(
         }
     },{timestamps:true}
 )
-export const User = mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
+export default User;
